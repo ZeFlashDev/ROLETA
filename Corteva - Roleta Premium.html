@@ -953,8 +953,11 @@ function easeSpin(t) {
 function computeForcedSpin(shouldWin) {
   const candidates = PRIZES.map((p, i) => ({ p, i })).filter(x => x.p.win === shouldWin);
   const { i: targetIdx } = candidates[Math.floor(Math.random() * candidates.length)];
-  // Cair perto do meio do segmento (35-65%)
-  const offset = ARC * (0.35 + Math.random() * 0.30);
+  // Guarda o índice do segmento alvo — fonte da verdade no revealResult
+  // (evita bugs onde o wobble final empurra o ponteiro pra outro segmento)
+  targetSegmentIdx = targetIdx;
+  // Cair PERTO do meio do segmento (40-60%) — margem maior pro wobble não atravessar borda
+  const offset = ARC * (0.40 + Math.random() * 0.20);
   const targetFinal = ((-Math.PI / 2) - targetIdx * ARC - offset + 6 * Math.PI) % (2 * Math.PI);
   let delta = (targetFinal - currentAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
   if (delta < 0.3) delta += 2 * Math.PI;
@@ -962,6 +965,9 @@ function computeForcedSpin(shouldWin) {
   totalSpin = delta + (8 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
   spinDuration = 8500 + Math.random() * 1500;
 }
+
+// Variável global pra guardar qual segmento foi sorteado
+let targetSegmentIdx = 0;
 
 document.getElementById('spinBtn').onclick = function() {
   if (spinning || sessionSpin >= 3) return;
@@ -1119,8 +1125,9 @@ function zoomToWinner(done) {
    RESULT
    ═══════════════════════════════════════════════════════════════ */
 function revealResult() {
-  const norm = ((-Math.PI / 2 - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-  const p = PRIZES[Math.floor(norm / ARC) % SEGMENTS];
+  // FONTE DA VERDADE: usa o segmento sorteado em computeForcedSpin
+  // Evita bugs onde o wobble visual empurra o ponteiro pra borda do segmento vizinho
+  const p = PRIZES[targetSegmentIdx];
 
   const icon  = document.getElementById('resIcon');
   const label = document.getElementById('resLabel');
@@ -1137,7 +1144,7 @@ function revealResult() {
     launchConfetti(p.glow);
     spawnWinStars();
   } else {
-    icon.textContent  = '�';
+    icon.textContent  = 'ðŸ˜…';
     label.textContent = '🍀  Não foi desta vez...';
     name.textContent  = 'Tente Novamente!';
     name.style.color  = '#6fdc99';

@@ -953,8 +953,11 @@ function easeSpin(t) {
 function computeForcedSpin(shouldWin) {
   const candidates = PRIZES.map((p, i) => ({ p, i })).filter(x => x.p.win === shouldWin);
   const { i: targetIdx } = candidates[Math.floor(Math.random() * candidates.length)];
-  // Cair perto do meio do segmento (35-65%)
-  const offset = ARC * (0.35 + Math.random() * 0.30);
+  // Guarda o índice do segmento alvo — fonte da verdade no revealResult
+  // (evita bugs onde o wobble final empurra o ponteiro pra outro segmento)
+  targetSegmentIdx = targetIdx;
+  // Cair PERTO do meio do segmento (40-60%) — margem maior pro wobble não atravessar borda
+  const offset = ARC * (0.40 + Math.random() * 0.20);
   const targetFinal = ((-Math.PI / 2) - targetIdx * ARC - offset + 6 * Math.PI) % (2 * Math.PI);
   let delta = (targetFinal - currentAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
   if (delta < 0.3) delta += 2 * Math.PI;
@@ -962,6 +965,9 @@ function computeForcedSpin(shouldWin) {
   totalSpin = delta + (8 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
   spinDuration = 8500 + Math.random() * 1500;
 }
+
+// Variável global pra guardar qual segmento foi sorteado
+let targetSegmentIdx = 0;
 
 document.getElementById('spinBtn').onclick = function() {
   if (spinning || sessionSpin >= 3) return;
@@ -1119,8 +1125,9 @@ function zoomToWinner(done) {
    RESULT
    ═══════════════════════════════════════════════════════════════ */
 function revealResult() {
-  const norm = ((-Math.PI / 2 - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-  const p = PRIZES[Math.floor(norm / ARC) % SEGMENTS];
+  // FONTE DA VERDADE: usa o segmento sorteado em computeForcedSpin
+  // Evita bugs onde o wobble visual empurra o ponteiro pra borda do segmento vizinho
+  const p = PRIZES[targetSegmentIdx];
 
   const icon  = document.getElementById('resIcon');
   const label = document.getElementById('resLabel');
@@ -1137,7 +1144,7 @@ function revealResult() {
     launchConfetti(p.glow);
     spawnWinStars();
   } else {
-    icon.textContent  = '�';
+    icon.textContent  = 'ðŸ˜…';
     label.textContent = '🍀  Não foi desta vez...';
     name.textContent  = 'Tente Novamente!';
     name.style.color  = '#6fdc99';
@@ -1300,41 +1307,31 @@ initSession();
 
   function connect() {
     ws = new WebSocket(wsUrl);
-
     ws.onopen = () => {
       console.log('[WS] Conectado como totem');
-      // Manda estado inicial pros controles que estão escutando
       sendSessionState();
     };
-
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
         if (msg.type === 'spin') {
-          // Comando "girar" do celular
           const btn = document.getElementById('spinBtn');
           if (btn && !btn.disabled) btn.click();
         } else if (msg.type === 'next') {
-          // Comando "próximo participante" do celular
           if (typeof nextParticipant === 'function') nextParticipant();
         }
       } catch (e) {}
     };
-
     ws.onclose = () => {
       console.log('[WS] Desconectado, tentando reconectar...');
       clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(connect, 2000);
     };
-
     ws.onerror = () => ws.close();
   }
 
-  // Expõe funções pra outros pontos do código mandarem updates
   window.wsSend = function(msg) {
-    if (ws && ws.readyState === 1) {
-      ws.send(JSON.stringify(msg));
-    }
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
   };
 
   function sendSessionState() {
@@ -1345,21 +1342,19 @@ initSession();
     });
   }
 
-  // Hooks pra notificar o controle dos eventos
-  // Patch: spinBtn.click envia "spinning"
+  // Patch: spinBtn click manda "spinning"
   const origSpinClick = document.getElementById('spinBtn').onclick;
   document.getElementById('spinBtn').onclick = function() {
     if (origSpinClick) origSpinClick.call(this);
     if (spinning) window.wsSend({ type: 'spinning' });
   };
 
-  // Hook no revealResult pra mandar resultado
+  // Hook revealResult — usa targetSegmentIdx (fonte da verdade)
   const origReveal = window.revealResult;
   window.revealResult = function() {
     origReveal();
-    // Reconstroi o último prêmio pra mandar
-    const norm = ((-Math.PI / 2 - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-    const p = PRIZES[Math.floor(norm / ARC) % SEGMENTS];
+    // FIX: usa o segmento sorteado, não o ângulo atual (evita inconsistência totem vs celular)
+    const p = PRIZES[targetSegmentIdx];
     window.wsSend({
       type: 'result',
       win: p.win,
@@ -1369,14 +1364,12 @@ initSession();
     });
   };
 
-  // Hook no initSession pra mandar novo estado quando recomeça
   const origInit = window.initSession;
   window.initSession = function() {
     origInit();
     setTimeout(sendSessionState, 100);
   };
 
-  // Hook no closeResult pra avisar que pode girar de novo
   const origClose = window.closeResult;
   window.closeResult = function() {
     origClose();
