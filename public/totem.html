@@ -372,15 +372,46 @@
     100% { box-shadow:0 -30px 120px rgba(255,230,128,.7), 0 -4px 0 var(--gold-4); }
   }
   .result-icon {
-    font-size:clamp(50px, 6vw, 80px);
-    animation:bounceIn .5s .2s both;
+    font-size:clamp(60px, 7vw, 90px);
+    display:inline-block;
+    animation:bounceInLose .6s .15s both, shakeLose 1.5s .8s ease-in-out infinite;
   }
   .result-bar.win .result-icon {
-    font-size:clamp(64px, 7vw, 100px);
-    animation:bounceInBig .5s .15s both;
+    font-size:clamp(72px, 8vw, 110px);
+    animation:bounceInWin .6s .15s both, danceWin 1.2s .9s ease-in-out infinite;
   }
-  @keyframes bounceIn    { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1)} }
-  @keyframes bounceInBig { 0%{transform:scale(0) rotate(-15deg);opacity:0} 60%{transform:scale(1.25) rotate(5deg);opacity:1} 100%{transform:scale(1) rotate(0)} }
+
+  /* Entrada — vitória: pula com rotação */
+  @keyframes bounceInWin {
+    0%   { transform:scale(0) rotate(-30deg); opacity:0; }
+    50%  { transform:scale(1.4) rotate(15deg); opacity:1; }
+    75%  { transform:scale(.9) rotate(-8deg); }
+    100% { transform:scale(1) rotate(0); }
+  }
+  /* Animação contínua vitória — dancinha de festa */
+  @keyframes danceWin {
+    0%, 100% { transform:scale(1) rotate(0deg) translateY(0); }
+    25%      { transform:scale(1.1) rotate(-12deg) translateY(-6px); }
+    50%      { transform:scale(1.05) rotate(0deg) translateY(0); }
+    75%      { transform:scale(1.1) rotate(12deg) translateY(-6px); }
+  }
+
+  /* Entrada — derrota: aparece tristinho, cabisbaixo */
+  @keyframes bounceInLose {
+    0%   { transform:scale(0) translateY(-20px); opacity:0; }
+    60%  { transform:scale(1.1) translateY(8px); opacity:1; }
+    100% { transform:scale(1) translateY(0); }
+  }
+  /* Animação contínua derrota — tremor de tristeza, vai de um lado pro outro */
+  @keyframes shakeLose {
+    0%, 100% { transform:rotate(0deg) translateY(0); }
+    10%      { transform:rotate(-8deg) translateY(2px); }
+    20%      { transform:rotate(8deg) translateY(2px); }
+    30%      { transform:rotate(-6deg) translateY(0); }
+    40%      { transform:rotate(6deg) translateY(0); }
+    50%      { transform:rotate(0deg) translateY(-3px); }
+    60%      { transform:rotate(0deg) translateY(0); }
+  }
 
   .result-text { text-align:center; }
   .result-label {
@@ -950,11 +981,14 @@ function easeSpin(t) {
   return 1 - Math.pow(1 - t, 5);
 }
 
+// Variável global pra guardar qual segmento foi sorteado em computeForcedSpin
+// (fonte da verdade — usada no revealResult pra evitar inconsistência com o ângulo visual)
+let targetSegmentIdx = 0;
+
 function computeForcedSpin(shouldWin) {
   const candidates = PRIZES.map((p, i) => ({ p, i })).filter(x => x.p.win === shouldWin);
   const { i: targetIdx } = candidates[Math.floor(Math.random() * candidates.length)];
   // Guarda o índice do segmento alvo — fonte da verdade no revealResult
-  // (evita bugs onde o wobble final empurra o ponteiro pra outro segmento)
   targetSegmentIdx = targetIdx;
   // Cair PERTO do meio do segmento (40-60%) — margem maior pro wobble não atravessar borda
   const offset = ARC * (0.40 + Math.random() * 0.20);
@@ -965,9 +999,6 @@ function computeForcedSpin(shouldWin) {
   totalSpin = delta + (8 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
   spinDuration = 8500 + Math.random() * 1500;
 }
-
-// Variável global pra guardar qual segmento foi sorteado
-let targetSegmentIdx = 0;
 
 document.getElementById('spinBtn').onclick = function() {
   if (spinning || sessionSpin >= 3) return;
@@ -1129,6 +1160,9 @@ function revealResult() {
   // Evita bugs onde o wobble visual empurra o ponteiro pra borda do segmento vizinho
   const p = PRIZES[targetSegmentIdx];
 
+  // DEBUG: confirma no console que estamos pegando o segmento certo
+  console.log('[REVEAL] targetSegmentIdx=' + targetSegmentIdx + ' label=' + p.label + ' win=' + p.win + ' shouldWin=' + sessionPlan[sessionSpin]);
+
   const icon  = document.getElementById('resIcon');
   const label = document.getElementById('resLabel');
   const name  = document.getElementById('resName');
@@ -1136,16 +1170,37 @@ function revealResult() {
 
   if (p.win) {
     sessionPrizesWon.push(p);
-    icon.textContent  = '🏆';
-    label.textContent = '✨  Parabéns! Você ganhou:';
+    // Sorteia emoji de comemoração (codepoints)
+    const winEmojis = [
+      0x1F3C6, // 🏆 troféu
+      0x1F389, // 🎉 confete
+      0x1F973, // 🥳 festa
+      0x1F38A, // 🎊 bola de festa
+      0x1F381, // 🎁 presente
+      0x1F31F, // 🌟 estrela
+    ];
+    const cp = winEmojis[Math.floor(Math.random() * winEmojis.length)];
+    icon.textContent  = String.fromCodePoint(cp);
+    label.textContent = String.fromCodePoint(0x2728) + '  Parabéns! Você ganhou:';
     name.textContent  = p.label;
     name.style.color  = '';
     bar.classList.add('win');
     launchConfetti(p.glow);
     spawnWinStars();
   } else {
-    icon.textContent  = 'ðŸ˜…';
-    label.textContent = '🍀  Não foi desta vez...';
+    // Sorteia emoji de tristeza/diversão (codepoints — imune a encoding)
+    const loseEmojis = [
+      0x1F605, // 😅 sorriso constrangido
+      0x1F61C, // 😜 piscando
+      0x1F923, // 🤣 rolando de rir
+      0x1F602, // 😂 chorando de rir
+      0x1F62D, // 😭 chorão
+      0x1F614, // 😔 cabisbaixo
+      0x1F643, // 🙃 cabeça pra baixo
+    ];
+    const cp = loseEmojis[Math.floor(Math.random() * loseEmojis.length)];
+    icon.textContent  = String.fromCodePoint(cp);
+    label.textContent = String.fromCodePoint(0x1F340) + '  Não foi desta vez...';
     name.textContent  = 'Tente Novamente!';
     name.style.color  = '#6fdc99';
     bar.classList.remove('win');

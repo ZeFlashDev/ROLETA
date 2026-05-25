@@ -11,7 +11,14 @@ const app = express();
 const server = createServer(app);
 
 // ─── Servir arquivos estáticos ───────────────────────────────
-app.use(express.static(join(__dirname, 'public')));
+app.use(express.static(join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // Força UTF-8 em todos os HTMLs pra emojis e acentos não quebrarem
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+  }
+}));
 
 // Rota raiz redireciona pro totem
 app.get('/', (req, res) => {

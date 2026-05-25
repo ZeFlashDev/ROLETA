@@ -950,11 +950,14 @@ function easeSpin(t) {
   return 1 - Math.pow(1 - t, 5);
 }
 
+// Variável global pra guardar qual segmento foi sorteado em computeForcedSpin
+// (fonte da verdade — usada no revealResult pra evitar inconsistência com o ângulo visual)
+let targetSegmentIdx = 0;
+
 function computeForcedSpin(shouldWin) {
   const candidates = PRIZES.map((p, i) => ({ p, i })).filter(x => x.p.win === shouldWin);
   const { i: targetIdx } = candidates[Math.floor(Math.random() * candidates.length)];
   // Guarda o índice do segmento alvo — fonte da verdade no revealResult
-  // (evita bugs onde o wobble final empurra o ponteiro pra outro segmento)
   targetSegmentIdx = targetIdx;
   // Cair PERTO do meio do segmento (40-60%) — margem maior pro wobble não atravessar borda
   const offset = ARC * (0.40 + Math.random() * 0.20);
@@ -965,9 +968,6 @@ function computeForcedSpin(shouldWin) {
   totalSpin = delta + (8 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
   spinDuration = 8500 + Math.random() * 1500;
 }
-
-// Variável global pra guardar qual segmento foi sorteado
-let targetSegmentIdx = 0;
 
 document.getElementById('spinBtn').onclick = function() {
   if (spinning || sessionSpin >= 3) return;
@@ -1136,16 +1136,37 @@ function revealResult() {
 
   if (p.win) {
     sessionPrizesWon.push(p);
-    icon.textContent  = '🏆';
-    label.textContent = '✨  Parabéns! Você ganhou:';
+    // Sorteia emoji de comemoração (codepoints)
+    const winEmojis = [
+      0x1F3C6, // 🏆 troféu
+      0x1F389, // 🎉 confete
+      0x1F973, // 🥳 festa
+      0x1F38A, // 🎊 bola de festa
+      0x1F381, // 🎁 presente
+      0x1F31F, // 🌟 estrela
+    ];
+    const cp = winEmojis[Math.floor(Math.random() * winEmojis.length)];
+    icon.textContent  = String.fromCodePoint(cp);
+    label.textContent = String.fromCodePoint(0x2728) + '  Parabéns! Você ganhou:';
     name.textContent  = p.label;
     name.style.color  = '';
     bar.classList.add('win');
     launchConfetti(p.glow);
     spawnWinStars();
   } else {
-    icon.textContent  = 'ðŸ˜…';
-    label.textContent = '🍀  Não foi desta vez...';
+    // Sorteia emoji de tristeza/diversão
+    const loseEmojis = [
+      0x1F605, // 😅 sorriso constrangido
+      0x1F61C, // 😜 piscando
+      0x1F923, // 🤣 rolando de rir
+      0x1F602, // 😂 chorando de rir
+      0x1F62D, // 😭 chorão
+      0x1F614, // 😔 cabisbaixo
+      0x1F643, // 🙃 cabeça pra baixo
+    ];
+    const cpL = loseEmojis[Math.floor(Math.random() * loseEmojis.length)];
+    icon.textContent  = String.fromCodePoint(cpL);
+    label.textContent = String.fromCodePoint(0x1F340) + '  Não foi desta vez...';
     name.textContent  = 'Tente Novamente!';
     name.style.color  = '#6fdc99';
     bar.classList.remove('win');
