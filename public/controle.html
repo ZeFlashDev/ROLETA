@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a2e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Corteva — Controle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700;900&family=Cinzel:wght@700;900&display=swap');
+
+  :root {
+    --green-1:  #0a2e1a;
+    --green-2:  #0f4d2a;
+    --green-3:  #1a8244;
+    --green-4:  #2cb863;
+    --green-5:  #6fdc99;
+    --gold-1:   #b8860b;
+    --gold-2:   #f5c43c;
+    --gold-3:   #ffe680;
+    --bg-1:     #04150a;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent; }
+
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background:var(--bg-1);
+    font-family:'Oswald', sans-serif;
+    color:#fff;
+    user-select:none; -webkit-user-select:none;
+    overscroll-behavior:none;
+  }
+
+  body {
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:space-between;
+    padding:24px 20px;
+    background:radial-gradient(ellipse at 50% 30%, #0d3a22 0%, #061a0e 60%, #02080a 100%);
+    position:relative;
+  }
+  body::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.7) 100%);
+    pointer-events:none;
+  }
+
+  /* Header */
+  .header {
+    position:relative; z-index:2;
+    text-align:center;
+    margin-top:8px;
+  }
+  .logo {
+    width:140px; height:auto;
+    margin-bottom:10px;
+    filter:drop-shadow(0 4px 12px rgba(44,184,99,.3));
+  }
+  .title {
+    font-family:'Cinzel', serif; font-weight:900;
+    font-size:22px; letter-spacing:3px;
+    text-transform:uppercase;
+    color:#fff;
+    text-shadow:0 0 24px rgba(44,184,99,.5);
+  }
+  .title em {
+    font-style:normal; color:var(--green-4);
+    text-shadow:0 0 24px rgba(111,220,153,.8);
+  }
+  .subtitle {
+    margin-top:6px;
+    font-size:11px; letter-spacing:5px;
+    color:rgba(255,255,255,.5);
+    text-transform:uppercase;
+  }
+
+  /* Status badge */
+  .status {
+    position:relative; z-index:2;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 16px; border-radius:20px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    font-size:12px; letter-spacing:2px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.7);
+  }
+  .status-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:#888;
+    transition:background .3s, box-shadow .3s;
+  }
+  .status.online .status-dot {
+    background:var(--green-4);
+    box-shadow:0 0 12px var(--green-4);
+    animation:pulseDot 2s ease-in-out infinite;
+  }
+  @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* BOTÃO GIRAR — protagonista absoluto */
+  .button-area {
+    position:relative; z-index:2;
+    flex:1; display:flex; align-items:center; justify-content:center;
+    width:100%;
+  }
+  .btn-spin {
+    position:relative;
+    width:min(75vw, 320px);
+    height:min(75vw, 320px);
+    border-radius:50%;
+    border:none; outline:none;
+    cursor:pointer;
+    background:none; padding:0;
+    transition:transform .15s cubic-bezier(.34,1.4,.64,1);
+  }
+  .btn-spin:active:not(:disabled) {
+    transform:scale(.94);
+  }
+  .btn-spin:disabled {
+    opacity:.4; cursor:not-allowed;
+  }
+  .btn-spin-ring {
+    position:absolute; inset:-12px;
+    border-radius:50%;
+    border:3px solid var(--gold-2);
+    opacity:.4;
+    animation:ringPulse 2s ease-in-out infinite;
+  }
+  .btn-spin-ring.r2 {
+    inset:-24px;
+    border-color:var(--gold-3);
+    animation-delay:.7s;
+  }
+  @keyframes ringPulse {
+    0%,100% { opacity:.2; transform:scale(.95); }
+    50%     { opacity:.6; transform:scale(1.05); }
+  }
+  .btn-spin-inner {
+    position:absolute; inset:0;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%),
+      linear-gradient(135deg, var(--green-4) 0%, var(--green-3) 50%, var(--green-2) 100%);
+    border:4px solid var(--gold-2);
+    box-shadow:
+      0 12px 50px rgba(44,184,99,.6),
+      inset 0 4px 12px rgba(255,255,255,.3),
+      inset 0 -8px 16px rgba(0,0,0,.4),
+      0 0 0 2px rgba(245,196,60,.3);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:6px;
+  }
+  .btn-spin-icon {
+    font-size:54px;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+  }
+  .btn-spin-text {
+    font-family:'Cinzel', serif; font-weight:900;
+    font-size:34px; letter-spacing:4px;
+    color:#fff; text-transform:uppercase;
+    text-shadow:0 2px 8px rgba(0,0,0,.6);
+  }
+  .btn-spin:disabled .btn-spin-ring { animation:none; }
+
+  /* Resultado / Status */
+  .info {
+    position:relative; z-index:2;
+    width:100%; text-align:center;
+    min-height:80px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:0 20px;
+  }
+  .info-label {
+    font-size:11px; letter-spacing:5px;
+    color:rgba(255,255,255,.4); text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .info-text {
+    font-family:'Cinzel', serif; font-weight:700;
+    font-size:24px; letter-spacing:2px;
+    text-transform:uppercase;
+    color:#fff;
+    line-height:1.2;
+    transition:color .3s;
+  }
+  .info-text.win  { color:var(--gold-3); text-shadow:0 0 20px rgba(245,196,60,.7); }
+  .info-text.lose { color:var(--green-5); }
+  .info-text.spinning { color:var(--green-5); animation:pulseDot 1s ease-in-out infinite; }
+
+  /* Counter */
+  .counter {
+    position:relative; z-index:2;
+    display:flex; gap:12px; align-items:center;
+    margin-bottom:16px;
+  }
+  .dot {
+    width:12px; height:12px; border-radius:50%;
+    border:2px solid rgba(245,196,60,.4);
+    transition:all .3s;
+  }
+  .dot.done { background:var(--gold-2); border-color:var(--gold-2);
+    box-shadow:0 0 10px rgba(245,196,60,.7); }
+  .dot.current { background:rgba(245,196,60,.4); border-color:var(--gold-2);
+    box-shadow:0 0 14px rgba(245,196,60,.8);
+    animation:pulseDot 1.2s ease-in-out infinite; }
+
+  /* Toast (feedback de envio) */
+  .toast {
+    position:fixed; top:30px; left:50%;
+    transform:translateX(-50%) translateY(-150%);
+    padding:10px 22px;
+    background:rgba(44,184,99,.9);
+    color:#fff;
+    border-radius:20px;
+    font-size:13px; letter-spacing:2px;
+    text-transform:uppercase;
+    z-index:100;
+    transition:transform .3s cubic-bezier(.34,1.4,.64,1);
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">Abra Caminho para a <em>Revolução</em></div>
+  <div class="subtitle">Controle Remoto</div>
+</div>
+
+<div class="status" id="status">
+  <span class="status-dot"></span>
+  <span id="statusText">Conectando...</span>
+</div>
+
+<div class="counter" id="counter">
+  <div class="dot" id="d0"></div>
+  <div class="dot" id="d1"></div>
+  <div class="dot" id="d2"></div>
+</div>
+
+<div class="button-area">
+  <button class="btn-spin" id="spinBtn" disabled>
+    <div class="btn-spin-ring"></div>
+    <div class="btn-spin-ring r2"></div>
+    <div class="btn-spin-inner">
+      <div class="btn-spin-icon">🎯</div>
+      <div class="btn-spin-text">Girar</div>
+    </div>
+  </button>
+</div>
+
+<div class="info">
+  <div class="info-label" id="infoLabel">Aguardando</div>
+  <div class="info-text" id="infoText">Pressione girar</div>
+</div>
+
+<div class="toast" id="toast">✓ Comando enviado</div>
+
+<script>
+  // ─── WebSocket ─────────────────────────────────────────────
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsUrl = `${proto}://${location.host}/ws?role=controle`;
+  let ws = null;
+  let reconnectTimer = null;
+
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const spinBtn = document.getElementById('spinBtn');
+  const infoLabel = document.getElementById('infoLabel');
+  const infoText = document.getElementById('infoText');
+  const toast = document.getElementById('toast');
+
+  let totemOnline = false;
+  let canSpin = true; // controla se pode mandar GIRAR (sessão ativa, não tá girando)
+
+  function connect() {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      statusEl.classList.add('online');
+      statusText.textContent = 'Conectado';
+    };
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        handleMessage(msg);
+      } catch (e) {}
+    };
+
+    ws.onclose = () => {
+      statusEl.classList.remove('online');
+      statusText.textContent = 'Reconectando...';
+      spinBtn.disabled = true;
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 2000);
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+  }
+
+  function handleMessage(msg) {
+    if (msg.type === 'totem_status') {
+      totemOnline = msg.online;
+      if (totemOnline) {
+        statusText.textContent = 'Totem online';
+        spinBtn.disabled = !canSpin;
+      } else {
+        statusText.textContent = 'Aguardando totem...';
+        spinBtn.disabled = true;
+      }
+    }
+    else if (msg.type === 'session_state') {
+      // { sessionSpin, canSpin, prizesWon }
+      canSpin = msg.canSpin;
+      spinBtn.disabled = !canSpin || !totemOnline;
+      updateCounter(msg.sessionSpin || 0);
+      if (msg.canSpin) {
+        infoLabel.textContent = `Giro ${(msg.sessionSpin || 0) + 1} de 3`;
+        infoText.textContent = 'Pressione girar';
+        infoText.className = 'info-text';
+      }
+    }
+    else if (msg.type === 'spinning') {
+      spinBtn.disabled = true;
+      canSpin = false;
+      infoLabel.textContent = 'Girando...';
+      infoText.textContent = 'Boa sorte!';
+      infoText.className = 'info-text spinning';
+    }
+    else if (msg.type === 'result') {
+      // { win, label, sessionSpin, sessionEnded }
+      infoLabel.textContent = msg.win ? 'Você ganhou!' : 'Não foi dessa vez';
+      infoText.textContent = msg.win ? msg.label : 'Tente Novamente!';
+      infoText.className = 'info-text ' + (msg.win ? 'win' : 'lose');
+      updateCounter((msg.sessionSpin || 0));
+      // Se sessão acabou, desabilita até próximo participante
+      if (msg.sessionEnded) {
+        spinBtn.disabled = true;
+      } else {
+        // Reabilita após uns segundos pro próximo giro
+        setTimeout(() => {
+          if (totemOnline) { canSpin = true; spinBtn.disabled = false; }
+        }, 4000);
+      }
+    }
+  }
+
+  function updateCounter(currentSpin) {
+    for (let i = 0; i < 3; i++) {
+      const d = document.getElementById('d' + i);
+      d.className = 'dot ' + (i < currentSpin ? 'done' : i === currentSpin ? 'current' : '');
+    }
+  }
+
+  // ─── Botão GIRAR ───────────────────────────────────────────
+  spinBtn.addEventListener('click', () => {
+    if (spinBtn.disabled) return;
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: 'spin' }));
+    spinBtn.disabled = true;
+    showToast('✓ Girando...');
+    // Vibração tátil (Android)
+    if (navigator.vibrate) navigator.vibrate(50);
+  });
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  // ─── Conexão inicial ───────────────────────────────────────
+  connect();
+
+  // Previne zoom acidental
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('dblclick', e => e.preventDefault());
+</script>
+
+</body>
+</html>

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, initial-scale=1.0">
+<title>Roleta — Abra Caminho para a Revolução</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@400;600;700&display=swap');
+
+  :root {
+    --g4:#00a651; --amber:#f5a623; --deep:#07071a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; }
+
+  body {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'Montserrat',sans-serif;
+    position:relative; background:var(--deep);
+  }
+
+  /* ── Background ── */
+  .bg { position:fixed; inset:0; z-index:0; overflow:hidden; }
+  .bg-sky { position:absolute; inset:0;
+    background:linear-gradient(170deg,#001a3d 0%,#002d5c 30%,#003d1a 65%,#002a12 100%); }
+  .bg-orb1 { position:absolute; width:70vw; height:70vh; left:-15vw; top:-10vh;
+    background:radial-gradient(ellipse,rgba(0,166,81,.18) 0%,transparent 70%); border-radius:50%; }
+  .bg-orb2 { position:absolute; width:50vw; height:60vh; right:-5vw; bottom:-5vh;
+    background:radial-gradient(ellipse,rgba(0,85,179,.22) 0%,transparent 70%); border-radius:50%; }
+  .bg-orb3 { position:absolute; width:40vw; height:40vh; left:35vw; top:10vh;
+    background:radial-gradient(ellipse,rgba(0,122,53,.12) 0%,transparent 65%); border-radius:50%; }
+  .bg-horizon { position:absolute; bottom:0; left:0; right:0; height:35%;
+    background:linear-gradient(to top,rgba(0,100,40,.35) 0%,transparent 100%); }
+  .grass-layer { position:absolute; bottom:0; left:0; right:0; height:80px; overflow:hidden; z-index:1; }
+  .grass-svg { position:absolute; bottom:0; width:100%; height:100%; }
+  .star { position:absolute; background:white; border-radius:50%; animation:twinkle linear infinite; opacity:0; }
+  @keyframes twinkle { 0%,100%{opacity:0;transform:scale(.5)} 50%{opacity:1;transform:scale(1)} }
+
+  /* ── Top title (flutuante topo) ── */
+  .top-title {
+    position:fixed; top:18px; left:50%; transform:translateX(-50%);
+    z-index:50;
+    text-align:center;
+    margin-bottom:0;
+  }
+  .main-title {
+    font-family:'Oswald',sans-serif;
+    font-size:clamp(16px,1.6vw,26px); font-weight:700;
+    color:#fff; text-transform:uppercase; letter-spacing:3px; line-height:1.1;
+    text-shadow:0 2px 14px rgba(0,166,81,.5);
+  }
+  .main-title em { font-style:normal; color:var(--g4); text-shadow:0 0 16px rgba(0,166,81,.9); }
+  .subtitle-line { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:3px; }
+  .subtitle-line::before,.subtitle-line::after { content:''; height:1px; width:50px; }
+  .subtitle-line::before { background:linear-gradient(to right,transparent,rgba(0,166,81,.7)); }
+  .subtitle-line::after  { background:linear-gradient(to left,transparent,rgba(0,166,81,.7)); }
+  .subtitle-text { font-size:clamp(7px,.6vw,11px); letter-spacing:5px; color:rgba(255,255,255,.45); text-transform:uppercase; }
+
+  /* ── Main row: TOTEM MODE — roleta centralizada, painéis ocultos ── */
+  .main-row {
+    position:relative; z-index:2;
+    display:flex; align-items:center; justify-content:center;
+    gap:0;
+    width:100%;
+    padding:0;
+  }
+
+  /* ── Prize panels (escondidos no modo totem) ── */
+  .prize-panel { display:none; }
+
+  .panel-title {
+    font-family:'Oswald',sans-serif;
+    font-size:clamp(11px,1.1vw,17px); font-weight:700;
+    color:var(--g4); letter-spacing:4px; text-transform:uppercase;
+    text-align:center; margin-bottom:4px;
+    text-shadow:0 0 14px rgba(0,166,81,.5);
+  }
+
+  .prize-item {
+    display:flex; align-items:center; gap:9px;
+    padding:9px 14px; border-radius:8px;
+    border:1px solid; font-weight:800;
+    font-size:clamp(9px,.9vw,14px);
+    letter-spacing:.5px; text-transform:uppercase;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    background:rgba(255,255,255,.93);
+    text-shadow:none;
+  }
+  .prize-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* ── Wheel center column ── */
+  .wheel-col {
+    flex:0 0 auto;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:6px;
+  }
+
+  .wheel-wrap { position:relative; display:flex; align-items:center; justify-content:center;
+    will-change:transform; transform-origin:center center; }
+  .wheel-glow {
+    position:absolute; width:calc(100% + 40px); height:calc(100% + 40px); border-radius:50%;
+    background:radial-gradient(circle,transparent 42%,rgba(0,166,81,.08) 66%,rgba(0,85,179,.06) 82%,transparent 100%);
+    animation:pulseGlow 3.5s ease-in-out infinite; pointer-events:none;
+  }
+  @keyframes pulseGlow { 0%,100%{opacity:.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.025)} }
+
+  canvas#wheel { display:block; border-radius:50%;
+    filter:drop-shadow(0 0 36px rgba(0,166,81,.4)) drop-shadow(0 0 70px rgba(0,60,150,.25)); }
+
+  .pointer { position:absolute; top:-6px; left:50%; transform:translateX(-50%); z-index:10;
+    filter:drop-shadow(0 4px 10px rgba(0,166,81,1));
+    transition:filter .2s; will-change:transform; }
+  .pointer svg { width:48px; height:60px; }
+
+  /* Flash quando a roleta para no prêmio */
+  .wheel-wrap.flash::after {
+    content:''; position:absolute; inset:-30px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,235,150,.45) 0%, rgba(255,200,80,.25) 40%, transparent 70%);
+    animation:flashPulse .9s ease-out forwards;
+    pointer-events:none; z-index:5;
+  }
+  @keyframes flashPulse {
+    0%   { opacity:0; transform:scale(.85); }
+    25%  { opacity:1; transform:scale(1.05); }
+    100% { opacity:0; transform:scale(1.25); }
+  }
+
+  /* Aro animado durante o giro */
+  canvas#wheel.spinning { filter:drop-shadow(0 0 50px rgba(0,200,100,.7)) drop-shadow(0 0 90px rgba(0,80,180,.4)); }
+
+  /* ── Spin counter (flutuante canto esquerdo) ── */
+  .spin-counter {
+    position:fixed; left:24px; bottom:24px; z-index:50;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding:14px 22px;
+    background:rgba(0,0,0,.35); border:1px solid rgba(0,166,81,.3);
+    border-radius:16px; backdrop-filter:blur(6px);
+  }
+  .spin-dots    { display:flex; gap:14px; align-items:center; }
+
+  .sdot {
+    width:22px; height:22px; border-radius:50%;
+    border:3px solid rgba(245,122,0,.4); background:transparent; transition:all .4s;
+  }
+  .sdot.done    { background:#f5a623; border-color:#f5a623; box-shadow:0 0 14px rgba(245,166,35,.9); }
+  .sdot.current { background:rgba(245,166,35,.35); border-color:#f5a623; box-shadow:0 0 20px rgba(245,166,35,.8); animation:pulseDot 1s ease-in-out infinite; }
+  @keyframes pulseDot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }
+
+  #spinLabel {
+    font-family:'Oswald',sans-serif;
+    font-size:clamp(12px,1.1vw,18px); letter-spacing:4px;
+    color:#f5a623; text-transform:uppercase; font-weight:700;
+    text-shadow:0 0 10px rgba(245,166,35,.7);
+  }
+
+  /* ── Buttons (flutuantes ao lado da roleta) ── */
+  .btn-wrap {
+    position:fixed; right:24px; bottom:24px; z-index:50;
+    display:flex; flex-direction:column; gap:10px;
+    min-width:280px;
+  }
+
+  .btn-spin { width:100%; border:none; background:none; cursor:pointer; outline:none; }
+  .btn-spin-inner {
+    display:flex; align-items:center; justify-content:center; gap:10px; padding:14px 32px;
+    background:linear-gradient(135deg,#005c28 0%,#00a651 45%,#00c060 55%,#007a35 100%);
+    border:2px solid rgba(255,255,255,.2); border-radius:60px;
+    font-family:'Oswald',sans-serif; font-size:clamp(14px,1.3vw,22px); font-weight:700;
+    color:#fff; letter-spacing:4px; text-transform:uppercase;
+    transition:transform .15s,box-shadow .15s;
+    box-shadow:0 6px 40px rgba(0,166,81,.55),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.25);
+    text-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  .btn-spin:hover:not(:disabled) .btn-spin-inner { transform:translateY(-3px); box-shadow:0 12px 50px rgba(0,166,81,.7),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.25); }
+  .btn-spin:active:not(:disabled) .btn-spin-inner { transform:translateY(1px); }
+  .btn-spin:disabled .btn-spin-inner { opacity:.5; cursor:not-allowed; }
+
+  .btn-next { width:100%; border:none; background:none; cursor:pointer; outline:none; display:none; }
+  .btn-next-inner {
+    display:flex; align-items:center; justify-content:center; gap:10px; padding:14px 28px;
+    background:linear-gradient(135deg,#002d5c 0%,#0055b3 50%,#003580 100%);
+    border:2px solid rgba(255,255,255,.2); border-radius:60px;
+    font-family:'Oswald',sans-serif; font-size:clamp(13px,1.2vw,20px); font-weight:700;
+    color:#fff; letter-spacing:3px; text-transform:uppercase;
+    box-shadow:0 6px 30px rgba(0,85,179,.5),inset 0 1px 0 rgba(255,255,255,.2);
+    transition:transform .15s;
+  }
+  .btn-next:hover .btn-next-inner { transform:translateY(-2px); }
+
+  /* ── Result bar ── */
+  .result-bar {
+    position:fixed; bottom:0; left:0; right:0; z-index:200;
+    display:flex; align-items:center; justify-content:center; gap:32px;
+    padding:24px 60px;
+    background:linear-gradient(135deg,#001f4e 0%,#002d5c 40%,#001a30 100%);
+    border-top:2px solid rgba(0,166,81,.5);
+    transform:translateY(100%);
+    transition:transform .55s cubic-bezier(.34,1.4,.64,1);
+    box-shadow:0 -20px 60px rgba(0,0,0,.9);
+  }
+  .result-bar.active { transform:translateY(0); }
+  .result-bar.win-mode {
+    background:linear-gradient(135deg,#003d1a 0%,#00a651 35%,#007a35 65%,#002d5c 100%);
+    border-top:3px solid #f5a623;
+    box-shadow:0 -20px 80px rgba(0,166,81,.6), 0 -4px 0 #f5a623;
+    animation:winPulse 1s ease-in-out infinite alternate;
+  }
+  @keyframes winPulse {
+    0%  { box-shadow:0 -20px 80px rgba(0,166,81,.5), 0 -4px 0 #f5a623; }
+    100%{ box-shadow:0 -30px 120px rgba(0,200,100,.8), 0 -4px 0 #ffcc00; }
+  }
+  .result-bar.win-mode .result-label { color:#ffe066 !important; opacity:1; font-size:clamp(13px,1.1vw,18px); }
+  .result-bar.win-mode .result-name  { color:#ffffff !important; font-size:clamp(32px,4.5vw,70px); text-shadow:0 0 40px #f5a623, 0 0 80px rgba(255,200,0,.5) !important; }
+
+  .result-icon { font-size:clamp(50px,6vw,80px); animation:bounceIn .5s .3s both; }
+  .result-bar.win-mode .result-icon { font-size:clamp(60px,7vw,100px); animation:bounceInBig .5s .2s both; }
+  @keyframes bounceIn    { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1)} }
+  @keyframes bounceInBig { 0%{transform:scale(0) rotate(-20deg);opacity:0} 60%{transform:scale(1.3) rotate(5deg);opacity:1} 100%{transform:scale(1) rotate(0)} }
+
+  .result-text-wrap { text-align:center; }
+  .result-label { font-family:'Oswald',sans-serif; font-size:clamp(11px,.95vw,15px); letter-spacing:5px; text-transform:uppercase; opacity:.75; transition:all .3s; }
+  .result-name  { font-family:'Oswald',sans-serif; font-size:clamp(26px,3.8vw,56px); font-weight:700; line-height:1.1; text-shadow:0 0 30px currentColor; text-transform:uppercase; letter-spacing:2px; transition:all .3s; }
+
+  /* Floating stars on win */
+  .win-star {
+    position:fixed; z-index:201; pointer-events:none;
+    font-size:24px; animation:floatStar 2s ease-out forwards;
+  }
+  @keyframes floatStar {
+    0%   { opacity:1; transform:translateY(0) scale(1) rotate(0deg); }
+    100% { opacity:0; transform:translateY(-180px) scale(1.5) rotate(360deg); }
+  }
+
+  #confetti-canvas { position:fixed; inset:0; pointer-events:none; z-index:190; }
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-sky"></div><div class="bg-orb1"></div><div class="bg-orb2"></div>
+  <div class="bg-orb3"></div><div class="bg-horizon"></div>
+  <div id="stars"></div>
+  <div class="grass-layer">
+    <svg class="grass-svg" viewBox="0 0 1920 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,50 Q200,30 400,45 Q600,58 800,38 Q1000,22 1200,40 Q1400,55 1600,35 Q1800,18 1920,42 L1920,80 L0,80 Z" fill="rgba(0,80,30,0.6)"/>
+      <path d="M0,50 Q200,30 400,45 Q600,58 800,38 Q1000,22 1200,40 Q1400,55 1600,35 Q1800,18 1920,42 L1920,80 L0,80 Z" fill="rgba(0,100,40,0.4)"/>
+      <g transform="translate(240,22)" fill="rgba(0,40,15,0.85)">
+        <ellipse cx="30" cy="12" rx="28" ry="11"/><ellipse cx="54" cy="14" rx="10" ry="8"/>
+        <rect x="8" y="20" width="5" height="12" rx="2"/><rect x="18" y="21" width="5" height="12" rx="2"/>
+        <rect x="38" y="21" width="5" height="12" rx="2"/><rect x="48" y="21" width="5" height="12" rx="2"/>
+        <path d="M60,9 Q66,4 68,2 Q69,1 70,4 Q68,6 64,9"/><ellipse cx="57" cy="14" rx="4" ry="3"/>
+      </g>
+      <g transform="translate(1480,28) scale(0.75)" fill="rgba(0,35,12,0.7)">
+        <ellipse cx="30" cy="12" rx="28" ry="11"/><ellipse cx="54" cy="14" rx="10" ry="8"/>
+        <rect x="8" y="20" width="5" height="12" rx="2"/><rect x="18" y="21" width="5" height="12" rx="2"/>
+        <rect x="38" y="21" width="5" height="12" rx="2"/><rect x="48" y="21" width="5" height="12" rx="2"/>
+      </g>
+      <g transform="translate(900,30) scale(0.85)" fill="rgba(0,40,15,0.75)">
+        <ellipse cx="30" cy="10" rx="28" ry="10"/><ellipse cx="52" cy="20" rx="9" ry="7"/>
+        <rect x="8" y="18" width="5" height="13" rx="2"/><rect x="18" y="18" width="5" height="13" rx="2"/>
+        <rect x="38" y="18" width="5" height="13" rx="2"/><rect x="48" y="19" width="5" height="12" rx="2"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Top title -->
+<div class="top-title">
+  <div class="main-title">Abra Caminho para a <em>Revolução</em></div>
+  <div class="subtitle-line"><span class="subtitle-text">Gire e descubra seu prêmio</span></div>
+</div>
+
+<!-- Main row -->
+<div class="main-row">
+
+  <!-- Left prize panel -->
+  <div class="prize-panel" id="prizeLeft">
+    <div class="panel-title">Prêmios</div>
+  </div>
+
+  <!-- Center: wheel + counter + buttons -->
+  <div class="wheel-col">
+    <div class="wheel-wrap" id="wheelWrap">
+      <div class="wheel-glow"></div>
+      <canvas id="wheel"></canvas>
+      <div class="pointer">
+        <svg viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><filter id="pg"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          <polygon points="24,4 44,48 24,38 4,48" fill="#00a651" filter="url(#pg)" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+          <circle cx="24" cy="48" r="8" fill="#00a651" stroke="#ffffff" stroke-width="1.5"/>
+          <circle cx="24" cy="48" r="4" fill="white"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="spin-counter">
+      <div class="spin-dots">
+        <div class="sdot" id="sd0"></div>
+        <div class="sdot" id="sd1"></div>
+        <div class="sdot" id="sd2"></div>
+      </div>
+      <div id="spinLabel">Giro 1 de 3</div>
+    </div>
+
+    <div class="btn-wrap">
+      <button class="btn-spin" id="spinBtn">
+        <div class="btn-spin-inner">▶ &nbsp;GIRAR&nbsp; ◀</div>
+      </button>
+      <button class="btn-next" id="nextBtn" onclick="nextParticipant()">
+        <div class="btn-next-inner">👤 &nbsp;PRÓXIMO PARTICIPANTE</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right prize panel -->
+  <div class="prize-panel" id="prizeRight">
+    <div class="panel-title">Prêmios</div>
+  </div>
+
+</div>
+
+<!-- Result bar -->
+<div class="result-bar" id="resultBar">
+  <span class="result-icon" id="resIcon">🌿</span>
+  <div class="result-text-wrap">
+    <div class="result-label" id="resLabel">Parabéns!</div>
+    <div class="result-name"  id="resName">Prêmio</div>
+  </div>
+</div>
+
+<!-- Summary overlay -->
+<div id="summaryOverlay" style="
+  display:none; position:fixed; inset:0; z-index:300;
+  background:linear-gradient(160deg,#001a0d 0%,#003d1a 40%,#001f4e 100%);
+  flex-direction:column; align-items:center; justify-content:center; gap:28px;
+  text-align:center; padding:40px;
+">
+  <!-- Animated border glow -->
+  <div style="position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 80px rgba(0,166,81,.3), inset 0 0 200px rgba(0,50,150,.2);"></div>
+
+  <div id="summaryIcon" style="font-size:clamp(60px,8vw,110px); animation:bounceIn .6s both;"></div>
+
+  <div style="font-family:'Oswald',sans-serif; font-size:clamp(12px,1.1vw,18px);
+    letter-spacing:7px; color:rgba(255,255,255,.45); text-transform:uppercase;">resultado final</div>
+
+  <div id="summaryTitle" style="font-family:'Oswald',sans-serif;
+    font-size:clamp(28px,4vw,64px); font-weight:700; color:#ffffff;
+    text-transform:uppercase; letter-spacing:3px; line-height:1.1;
+    text-shadow:0 0 40px rgba(0,220,100,.7);"></div>
+
+  <div id="summaryPrizes" style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; max-width:900px;"></div>
+
+  <div id="summaryMsg" style="font-family:'Oswald',sans-serif;
+    font-size:clamp(14px,1.5vw,22px); color:rgba(255,255,255,.5);
+    letter-spacing:4px; text-transform:uppercase; margin-top:8px;"></div>
+
+  <button id="summaryNextBtn" onclick="nextParticipant()" style="
+    margin-top:16px; border:none; border-radius:60px; cursor:pointer; outline:none;
+    padding:18px 60px;
+    background:linear-gradient(135deg,#002d5c 0%,#0055b3 50%,#003580 100%);
+    font-family:'Oswald',sans-serif; font-size:clamp(15px,1.5vw,24px);
+    font-weight:700; color:#fff; letter-spacing:4px; text-transform:uppercase;
+    box-shadow:0 6px 40px rgba(0,85,179,.6),inset 0 1px 0 rgba(255,255,255,.2);
+    border:2px solid rgba(255,255,255,.15);
+    transition:transform .15s, box-shadow .15s;
+  " onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+    👤 &nbsp;PRÓXIMO PARTICIPANTE
+  </button>
+</div>
+
+<script>
+const PRIZES = [
+  { label:"Chaveiro",            color:"#0091ea", win:true  },
+  { label:"Boné",                color:"#00c853", win:true  },
+  { label:"Caneta",              color:"#f5a623", win:true  },
+  { label:"Não foi desta vez!",  color:"#1a2a1a", win:false },
+  { label:"Chaveiro",            color:"#e65100", win:true  },
+  { label:"Caderneta",           color:"#00897b", win:true  },
+  { label:"Caneta",              color:"#0077b6", win:true  },
+  { label:"Não foi desta vez!",  color:"#1a2a1a", win:false },
+  { label:"Chaveiro",            color:"#558b2f", win:true  },
+  { label:"Bastão",              color:"#1565c0", win:true  },
+  { label:"Caneta",              color:"#00bcd4", win:true  },
+  { label:"Não foi desta vez!",  color:"#1a2a1a", win:false },
+];
+
+// ── Build prize panels (6 left, 6 right) ─────────────────────────────────
+function buildPanels() {
+  const left  = document.getElementById('prizeLeft');
+  const right = document.getElementById('prizeRight');
+  PRIZES.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'prize-item';
+    const isNoWin = !p.win;
+    el.style.cssText = isNoWin
+      ? `background:#1a2a1a;border-color:#2e4a2e;color:#4caf50;`
+      : `background:rgba(255,255,255,.93);border-color:${p.color};color:${p.color};`;
+    el.innerHTML = `<div class="prize-dot" style="background:${isNoWin?'#4caf50':p.color}"></div>${p.label}`;
+    (i < 6 ? left : right).appendChild(el);
+  });
+}
+
+// ── Cycle system ──────────────────────────────────────────────────────────
+const CYCLE_WINS = [1, 1, 0, 1, 2, 1, 0, 1, 1, 2, 1, 1, 0, 1, 2, 1];
+let cyclePhase = 0, sessionSpin = 0, sessionPlan = [];
+
+let sessionPrizesWon = [];
+
+function initSession() {
+  sessionSpin = 0;
+  sessionPrizesWon = [];
+  const wins = CYCLE_WINS[cyclePhase];
+  const order = [0,1,2].sort(() => Math.random() - 0.5);
+  sessionPlan = [false,false,false];
+  for (let i = 0; i < wins; i++) sessionPlan[order[i]] = true;
+  updateSessionUI();
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('spinBtn').disabled = false;
+  document.getElementById('spinBtn').style.display = 'block';
+  document.getElementById('resultBar').classList.remove('active');
+  document.getElementById('summaryOverlay').style.display = 'none';
+  // reset do zoom da roleta
+  const wrap = document.getElementById('wheelWrap');
+  if (wrap) { wrap.style.transition = 'none'; wrap.style.transform = ''; }
+  stopConfetti();
+}
+
+function updateSessionUI() {
+  document.getElementById('spinLabel').textContent =
+    sessionSpin >= 3 ? 'Sessão encerrada' : `Giro ${sessionSpin+1} de 3`;
+  for (let i = 0; i < 3; i++) {
+    const d = document.getElementById('sd'+i);
+    d.className = i < sessionSpin ? 'sdot done' : i === sessionSpin ? 'sdot current' : 'sdot';
+  }
+}
+
+function nextParticipant() {
+  cyclePhase = (cyclePhase + 1) % 16;
+  initSession();
+}
+
+// ── Wheel sizing ──────────────────────────────────────────────────────────
+const wCanvas = document.getElementById('wheel');
+function calcSize() {
+  // MODO TOTEM: roleta base ~55% da tela, deixa espaço pro zoom progressivo (até 1.75x = 96%)
+  const s = Math.floor(Math.min(window.innerHeight * 0.55, window.innerWidth * 0.55, 1100) / 2) * 2;
+  wCanvas.width = s; wCanvas.height = s;
+}
+calcSize();
+window.addEventListener('resize', () => { calcSize(); drawWheel(currentAngle); });
+
+const SEGMENTS = PRIZES.length;
+const ARC = (2*Math.PI)/SEGMENTS;
+let currentAngle = 0, spinning = false;
+let startTime = null, spinDuration = 0, totalSpin = 0, lastEased = 0;
+
+  /* ── Draw ──────────────────────────────────────────────────────────────────
+     Margem interna reduzida pra aproveitar mais o canvas ── */
+function drawWheel(angle) {
+  const c = wCanvas.getContext('2d'), S = wCanvas.width, R = S/2;
+  c.clearRect(0,0,S,S);
+
+  // Aro externo com gradiente animado durante o giro
+  c.save(); c.beginPath(); c.arc(R,R,R-2,0,2*Math.PI);
+  const rimShift = spinning ? (performance.now() * 0.001) % 1 : 0;
+  const rim = c.createLinearGradient(
+    R + Math.cos(rimShift * Math.PI * 2) * R,
+    R + Math.sin(rimShift * Math.PI * 2) * R,
+    R - Math.cos(rimShift * Math.PI * 2) * R,
+    R - Math.sin(rimShift * Math.PI * 2) * R
+  );
+  rim.addColorStop(0,'#4cbb7a'); rim.addColorStop(.25,'#00a651');
+  rim.addColorStop(.5,'#007a35'); rim.addColorStop(.75,'#1a7fd4'); rim.addColorStop(1,'#0055b3');
+  c.strokeStyle=rim; c.lineWidth=11; c.stroke(); c.restore();
+
+  for (let i=0;i<SEGMENTS*2;i++) {
+    const a=(i/(SEGMENTS*2))*2*Math.PI+angle;
+    c.beginPath(); c.arc(R+Math.cos(a)*(R-9), R+Math.sin(a)*(R-9), i%2===0?4:2.5, 0, 2*Math.PI);
+    c.fillStyle=i%2===0?'#00a651':'rgba(0,166,81,.35)'; c.fill();
+  }
+
+  for (let i=0;i<SEGMENTS;i++) {
+    const st=angle+i*ARC, en=st+ARC, p=PRIZES[i];
+    c.beginPath(); c.moveTo(R,R); c.arc(R,R,R-16,st,en); c.closePath();
+    c.fillStyle=p.color; c.fill();
+    c.beginPath(); c.moveTo(R,R); c.arc(R,R,R-16,st,en); c.closePath();
+    c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1.5; c.stroke();
+    c.save(); c.beginPath(); c.moveTo(R,R); c.arc(R,R,R-16,st,en); c.closePath(); c.clip();
+    const sg=c.createRadialGradient(R,R,0,R,R,R);
+    sg.addColorStop(0,'rgba(255,255,255,.18)'); sg.addColorStop(.5,'rgba(255,255,255,.04)'); sg.addColorStop(1,'rgba(0,0,0,.25)');
+    c.fillStyle=sg; c.fill(); c.restore();
+    c.save(); c.translate(R,R); c.rotate(angle+i*ARC+ARC/2); c.translate(R*.62,0);
+    c.fillStyle = p.win ? '#ffffff' : '#4caf50';
+    c.textAlign='center'; c.textBaseline='middle';
+    const fs=Math.max(20,Math.min(34,S*.055));
+    c.font=`800 ${fs}px Oswald,sans-serif`; c.fillText(p.label,0,0); c.restore();
+  }
+
+  const hr=Math.max(26,S*.072);
+  c.beginPath(); c.arc(R,R,hr,0,2*Math.PI);
+  const hg=c.createRadialGradient(R-hr*.3,R-hr*.3,0,R,R,hr);
+  hg.addColorStop(0,'#5ce09a'); hg.addColorStop(.4,'#00a651'); hg.addColorStop(1,'#003d1a');
+  c.fillStyle=hg; c.fill(); c.strokeStyle='rgba(255,255,255,.4)'; c.lineWidth=2.5; c.stroke();
+  c.save(); c.translate(R,R);
+  c.font=`900 ${Math.max(16,S*.042)}px Oswald,sans-serif`;
+  c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#fff'; c.globalAlpha=.9;
+  c.fillText('C',0,1); c.restore();
+}
+
+// ── Forced spin ───────────────────────────────────────────────────────────
+let targetSegmentIdx = 0; // guarda o segmento alvo pra usar no zoom
+
+function computeForcedSpin(shouldWin) {
+  const candidates = PRIZES.map((p,i)=>({p,i})).filter(x=>x.p.win===shouldWin);
+  const {i:targetIdx} = candidates[Math.floor(Math.random()*candidates.length)];
+  targetSegmentIdx = targetIdx;
+  // Cair bem no meio do segmento (com leve variação) pro ponteiro não ficar na linha
+  const offset = ARC*(0.35+Math.random()*0.30);
+  const targetFinal = ((-Math.PI/2)-targetIdx*ARC-offset+6*Math.PI)%(2*Math.PI);
+  let delta = (targetFinal - currentAngle%(2*Math.PI) + 2*Math.PI)%(2*Math.PI);
+  if (delta < 0.3) delta += 2*Math.PI;
+  // Mais voltas pra dar suspense (8 a 12 voltas completas)
+  totalSpin    = delta + (8+Math.floor(Math.random()*5))*2*Math.PI;
+  spinDuration = 8500 + Math.random()*1500;
+}
+
+document.getElementById('spinBtn').onclick = function() {
+  if (spinning || sessionSpin>=3) return;
+  spinning=true; this.disabled=true;
+  computeForcedSpin(sessionPlan[sessionSpin]);
+  startTime=null; lastEased=0; lastTickSeg=-1; pointerKick=0;
+  wCanvas.classList.add('spinning');
+  // Reset do zoom: sem transição (JS controla frame a frame durante o giro)
+  const wrap = document.getElementById('wheelWrap');
+  wrap.style.transition = 'none';
+  wrap.style.transform = 'scale(1)';
+  void wrap.offsetWidth; // force reflow
+  playSpinSound();
+  requestAnimationFrame(animSpin);
+};
+
+// ── Animação cinematográfica da roleta ────────────────────────────────────
+// Curva matemática limpa, monotônica e contínua.
+// O efeito "tá roubando" vem das voltas extras (computeForcedSpin), não da curva.
+let lastTickSeg = -1;
+let pointerKick = 0; // deslocamento do ponteiro (0-1)
+
+function easeSpin(t) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  // easeOutQuint puro — curva suave, monotônica, sempre crescente
+  // Dá uma desaceleração longa e dramática nos últimos 30% do tempo
+  return 1 - Math.pow(1 - t, 5);
+}
+
+function animSpin(ts) {
+  if (!startTime) { startTime = ts; lastEased = 0; }
+  const el = ts - startTime;
+  const prog = Math.min(el / spinDuration, 1);
+  const eased = easeSpin(prog);
+
+  // Progresso sempre positivo — curva é monotônica
+  const delta = eased - lastEased;
+  currentAngle = (currentAngle + totalSpin * delta) % (2 * Math.PI);
+  lastEased = eased;
+
+  // Zoom progressivo durante o giro — aumenta gradualmente, mais forte no fim
+  let zoom;
+  if (prog < 0.50) {
+    zoom = 1.00 + (prog / 0.50) * 0.15;
+  } else if (prog < 0.85) {
+    zoom = 1.15 + ((prog - 0.50) / 0.35) * 0.20;
+  } else {
+    const k = (prog - 0.85) / 0.15;
+    zoom = 1.35 + (1 - Math.pow(1 - k, 3)) * 0.15;
+  }
+  const wrap = document.getElementById('wheelWrap');
+  wrap.style.transform = `scale(${zoom.toFixed(3)})`;
+
+  // Detecta passagem por borda de segmento — kick visual no ponteiro
+  const segNow = Math.floor(((-Math.PI/2 - currentAngle) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) / ARC);
+  if (segNow !== lastTickSeg && lastTickSeg !== -1) {
+    pointerKick = Math.min(1, 0.4 + (1 - prog) * 0.4);
+    tickSound(el, spinDuration);
+  }
+  lastTickSeg = segNow;
+
+  // Decay do kick (volta rápido pro centro)
+  pointerKick *= 0.78;
+  applyPointerKick(pointerKick);
+
+  drawWheel(currentAngle);
+
+  if (prog < 1) {
+    requestAnimationFrame(animSpin);
+  } else {
+    pointerKick = 0;
+    applyPointerKick(0);
+    runFinalWobble(() => {
+      spinning = false;
+      sessionSpin++;
+      wCanvas.classList.remove('spinning');
+      flashWinningSegment();
+      zoomToWinner(() => revealResult());
+    });
+  }
+}
+
+// Movimenta o ponteiro lateralmente conforme a velocidade
+function applyPointerKick(intensity) {
+  const ptr = document.querySelector('.pointer');
+  if (!ptr) return;
+  const offset = (Math.random() - 0.5) * 6 * intensity;
+  const tilt = (Math.random() - 0.5) * 8 * intensity;
+  ptr.style.transform = `translateX(calc(-50% + ${offset}px)) rotate(${tilt}deg)`;
+}
+
+// Wobble final — oscilação amortecida da roleta (efeito mola forte)
+function runFinalWobble(done) {
+  const baseAngle = currentAngle;
+  const start = performance.now();
+  const dur = 800;
+  const amp = ARC * 0.08;
+  // Mantém o zoom atual durante o wobble (não toca no transform)
+  function step(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const decay = Math.pow(1 - t, 2.2);
+    const wobble = Math.sin(t * Math.PI * 5) * amp * decay;
+    currentAngle = (baseAngle + wobble + 2 * Math.PI) % (2 * Math.PI);
+    drawWheel(currentAngle);
+    if (t < 1) requestAnimationFrame(step);
+    else { currentAngle = baseAngle; drawWheel(currentAngle); done(); }
+  }
+  requestAnimationFrame(step);
+}
+
+// Flash no segmento vencedor — pisca o canvas com um halo
+function flashWinningSegment() {
+  const wrap = document.getElementById('wheelWrap');
+  wrap.classList.add('flash');
+  setTimeout(() => wrap.classList.remove('flash'), 900);
+}
+
+// Zoom dramático final — close cinematográfico no segmento vencedor
+function zoomToWinner(done) {
+  const wrap = document.getElementById('wheelWrap');
+  // Close dramático: zoom 1.75x e desloca pra centralizar a parte de cima (onde tá o prêmio)
+  wrap.style.transition = 'transform 900ms cubic-bezier(.16,1,.3,1)';
+  wrap.style.transform = 'translateY(18%) scale(1.75)';
+
+  setTimeout(() => {
+    done();
+  }, 950);
+
+  // Volta ao normal depois (quando a barra de resultado vai fechar)
+  setTimeout(() => {
+    wrap.style.transition = 'transform 700ms cubic-bezier(.5,0,.3,1)';
+    wrap.style.transform = '';
+  }, 5200);
+}
+
+// ── Result ────────────────────────────────────────────────────────────────
+function revealResult() {
+  const norm=((-Math.PI/2-currentAngle)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+  const p=PRIZES[Math.floor(norm/ARC)%SEGMENTS];
+  document.getElementById('resIcon').textContent  = p.win ? '🤩' : ['😂','🤣','😆'][Math.floor(Math.random()*3)];
+  document.getElementById('resName').textContent  = p.label;
+  document.getElementById('resName').style.color  = p.win ? p.color : '#4caf50';
+  if (p.win) { sessionPrizesWon.push(p);
+    document.getElementById('resLabel').textContent = '🌿  Parabéns! Você ganhou:';
+    document.getElementById('resLabel').style.color = 'rgba(0,200,100,.85)';
+    launchConfetti(p.color); playWinSound();
+  } else {
+    document.getElementById('resLabel').textContent = '🌾  Não foi desta vez...';
+    document.getElementById('resLabel').style.color = 'rgba(150,200,180,.7)';
+    playLoseSound();
+  }
+  const bar = document.getElementById('resultBar');
+  bar.classList.add('active');
+  if (p.win) {
+    bar.classList.add('win-mode');
+    spawnWinStars();
+  } else {
+    bar.classList.remove('win-mode');
+  }
+  setTimeout(closeResult, 3500);
+}
+
+function spawnWinStars() {
+  const emojis = ['⭐','🌟','✨','💫','🎉','🎊','🏆','🌿'];
+  for (let i = 0; i < 12; i++) {
+    setTimeout(() => {
+      const s = document.createElement('div');
+      s.className = 'win-star';
+      s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      s.style.left  = (10 + Math.random() * 80) + 'vw';
+      s.style.bottom = (80 + Math.random() * 15) + 'px';
+      s.style.animationDuration = (1.2 + Math.random() * 1.2) + 's';
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 2500);
+    }, i * 180);
+  }
+}
+
+function closeResult() {
+  const bar = document.getElementById('resultBar');
+  bar.classList.remove('active');
+  bar.classList.remove('win-mode');
+  stopConfetti();
+  if (sessionSpin>=3) {
+    updateSessionUI();
+    document.getElementById('spinBtn').style.display='none';
+    setTimeout(showSummary, 600);
+  } else {
+    updateSessionUI();
+    document.getElementById('spinBtn').disabled=false;
+  }
+}
+
+function showSummary() {
+  const overlay = document.getElementById('summaryOverlay');
+  const prizesDiv = document.getElementById('summaryPrizes');
+  prizesDiv.innerHTML = '';
+
+  if (sessionPrizesWon.length === 0) {
+    // Nenhum prêmio
+    document.getElementById('summaryIcon').textContent = ['😂','🤣','😆'][Math.floor(Math.random()*3)];
+    document.getElementById('summaryTitle').textContent = 'Não foi desta vez!';
+    document.getElementById('summaryTitle').style.color = '#4caf50';
+    document.getElementById('summaryTitle').style.textShadow = '0 0 30px rgba(76,175,80,.5)';
+    document.getElementById('summaryMsg').textContent = 'Tente novamente na próxima';
+    document.getElementById('summaryMsg').style.color = 'rgba(255,255,255,.4)';
+    overlay.style.background = 'linear-gradient(160deg,#050d05 0%,#0d1f0d 40%,#050d14 100%)';
+    launchConfettiNone();
+  } else {
+    // Ganhou prêmio(s)
+    document.getElementById('summaryIcon').textContent = sessionPrizesWon.length >= 2 ? '🤩🤩' : '🤩';
+    document.getElementById('summaryTitle').textContent = sessionPrizesWon.length >= 2 ? 'Parabéns! Você ganhou 2 prêmios!' : 'Parabéns! Você ganhou!';
+    document.getElementById('summaryTitle').style.color = '#ffffff';
+    document.getElementById('summaryTitle').style.textShadow = '0 0 40px rgba(0,220,100,.8)';
+    document.getElementById('summaryMsg').textContent = 'Retire seu brinde no balcão ✔';
+    document.getElementById('summaryMsg').style.color = '#f5a623';
+    overlay.style.background = 'linear-gradient(160deg,#001a0d 0%,#003d1a 40%,#001f4e 100%)';
+
+    sessionPrizesWon.forEach(p => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background:rgba(255,255,255,.95); border:3px solid ${p.color};
+        border-radius:16px; padding:22px 36px;
+        font-family:'Oswald',sans-serif; font-weight:700;
+        font-size:clamp(20px,2.5vw,38px); color:${p.color};
+        letter-spacing:2px; text-transform:uppercase;
+        box-shadow:0 0 30px ${p.color}66;
+        animation:bounceIn .5s both;
+        text-shadow:none;
+      `;
+      card.textContent = p.label;
+      prizesDiv.appendChild(card);
+    });
+
+    launchConfetti(sessionPrizesWon[0].color);
+    spawnWinStars();
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function launchConfettiNone() {
+  // Confete apagado pra derrota
+  confP=[];
+  const cols=['#1a3a1a','#2a4a2a','#1a2a3a','#2a3a4a'];
+  for(let i=0;i<40;i++) confP.push({x:Math.random()*cc.width,y:-20,w:Math.random()*8+3,h:Math.random()*5+2,
+    color:cols[Math.floor(Math.random()*cols.length)],vx:(Math.random()-.5)*3,vy:Math.random()*3+1,
+    rot:Math.random()*360,rotV:(Math.random()-.5)*5,opacity:.5});
+  if(confA) cancelAnimationFrame(confA); animConf();
+}
+
+// ── Stars ─────────────────────────────────────────────────────────────────
+function buildStars() {
+  const c=document.getElementById('stars');
+  c.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;';
+  for (let i=0;i<120;i++) {
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*2+.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*60}%;animation-duration:${(Math.random()*4+2).toFixed(1)}s;animation-delay:${(Math.random()*6).toFixed(1)}s;`;
+    c.appendChild(s);
+  }
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────
+const cc=document.getElementById('confetti-canvas'), cctx=cc.getContext('2d');
+let confP=[],confA=null;
+function resCC(){cc.width=window.innerWidth;cc.height=window.innerHeight;}
+resCC(); window.addEventListener('resize',resCC);
+function launchConfetti(accent){
+  confP=[];
+  const cols=['#00a651','#0055b3','#4cbb7a','#1a7fd4','#f5a623','#e8830a','#ffffff','#a0ffcc',accent];
+  for(let i=0;i<200;i++) confP.push({x:Math.random()*cc.width,y:-20,w:Math.random()*12+4,h:Math.random()*6+3,
+    color:cols[Math.floor(Math.random()*cols.length)],vx:(Math.random()-.5)*5,vy:Math.random()*5+2,
+    rot:Math.random()*360,rotV:(Math.random()-.5)*9,opacity:1});
+  if(confA) cancelAnimationFrame(confA); animConf();
+}
+function animConf(){
+  cctx.clearRect(0,0,cc.width,cc.height); let alive=false;
+  confP.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.rot+=p.rotV;p.vy+=.12;
+    if(p.y>cc.height-40)p.opacity-=.022;
+    if(p.opacity>0)alive=true;
+    cctx.save();cctx.translate(p.x,p.y);cctx.rotate(p.rot*Math.PI/180);
+    cctx.globalAlpha=Math.max(0,p.opacity);cctx.fillStyle=p.color;
+    cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cctx.restore();
+  });
+  if(alive)confA=requestAnimationFrame(animConf);else cctx.clearRect(0,0,cc.width,cc.height);
+}
+function stopConfetti(){confP=[];cctx.clearRect(0,0,cc.width,cc.height);}
+
+// ── Audio removido ───────────────────────────────────────────────────────
+function playSpinSound(){}
+function tickSound(){}
+function playWinSound(){}
+function playLoseSound(){}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildStars(); buildPanels(); drawWheel(0); initSession();
+</script>
+</body>
+</html>

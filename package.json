@@ -1,0 +1,17 @@
+{
+  "name": "corteva-roleta",
+  "version": "1.0.0",
+  "description": "Roleta de Prêmios Corteva — totem + controle remoto",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}
