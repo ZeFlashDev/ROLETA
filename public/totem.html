@@ -675,10 +675,10 @@ function animateBulbs(active) {
 
 /* ═══════════════════════════════════════════════════════════════
    SESSION CYCLE — controla quantos prêmios cada participante leva
-   Taxa de vitória: 50% (24 prêmios em 48 giros / 16 sessões)
-   Distribuição: cada participante ganha em média 1.5 prêmios
+   Distribuição: a cada 8 participantes, 7 ganham 1 prêmio e 1 ganha 2 (12% bônus)
+   Todo mundo SEMPRE leva pelo menos 1 brinde
    ═══════════════════════════════════════════════════════════════ */
-const CYCLE_WINS = [2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1];
+const CYCLE_WINS = [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1];
 let cyclePhase = 0;
 let sessionSpin = 0;
 let sessionPlan = [];
