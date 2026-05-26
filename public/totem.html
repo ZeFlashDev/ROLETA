@@ -71,10 +71,18 @@
     background:radial-gradient(circle, rgba(245,196,60,.18), transparent 70%); }
 
   .particles { position:absolute; inset:0; pointer-events:none; }
+  /* Pausa as partículas durante o giro pra liberar GPU pro canvas */
+  body.spinning .particle {
+    animation-play-state:paused;
+  }
+  body.spinning .orb {
+    animation-play-state:paused;
+  }
   .particle {
     position:absolute; width:2px; height:2px; border-radius:50%;
     background:#ffe680; opacity:0;
     animation:float linear infinite;
+    will-change:transform, opacity;
   }
   @keyframes float {
     0%   { opacity:0; transform:translateY(0) scale(.5); }
@@ -202,6 +210,8 @@
   canvas#wheel {
     position:relative; z-index:2;
     border-radius:50%;
+    will-change:transform;
+    transform:translateZ(0); /* força compositing layer dedicada na GPU */
     filter:
       drop-shadow(0 0 24px rgba(44,184,99,.5))
       drop-shadow(0 0 60px rgba(0,80,30,.5));
@@ -641,31 +651,34 @@ function positionBulbs() {
 }
 
 let bulbAnimating = false;
+let bulbInterval = null;
 function animateBulbs(active) {
   const bulbs = document.querySelectorAll('.bulb');
   if (active) {
+    if (bulbAnimating) return;
     bulbAnimating = true;
     let frame = 0;
-    function tick() {
-      if (!bulbAnimating) return;
+    // Single setInterval em vez de chain de setTimeouts (mais eficiente)
+    bulbInterval = setInterval(() => {
       bulbs.forEach((b, i) => {
         const lit = (i + frame) % 2 === 0;
         b.classList.toggle('off', !lit);
       });
       frame++;
-      setTimeout(tick, 180);
-    }
-    tick();
+    }, 180);
   } else {
     bulbAnimating = false;
+    if (bulbInterval) { clearInterval(bulbInterval); bulbInterval = null; }
     bulbs.forEach(b => b.classList.remove('off'));
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    SESSION CYCLE — controla quantos prêmios cada participante leva
+   Taxa de vitória: 50% (24 prêmios em 48 giros / 16 sessões)
+   Distribuição: cada participante ganha em média 1.5 prêmios
    ═══════════════════════════════════════════════════════════════ */
-const CYCLE_WINS = [1, 1, 0, 1, 2, 1, 0, 1, 1, 2, 1, 1, 0, 1, 2, 1];
+const CYCLE_WINS = [2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1];
 let cyclePhase = 0;
 let sessionSpin = 0;
 let sessionPlan = [];
@@ -1007,12 +1020,12 @@ document.getElementById('spinBtn').onclick = function() {
   computeForcedSpin(sessionPlan[sessionSpin]);
   startTime = null; lastEased = 0; lastTickSeg = -1; pointerKick = 0;
   wCanvas.classList.add('spinning');
+  document.body.classList.add('spinning'); // pausa partículas/orbs durante giro
   animateBulbs(true);
   const wrap = document.getElementById('wheelWrap');
   wrap.style.transition = 'none';
   wrap.style.transform = 'scale(1)';
   void wrap.offsetWidth;
-  // Marca UI como "não escondida" (caso voltando de outro giro)
   uiHidden = false;
   requestAnimationFrame(animSpin);
 };
@@ -1097,6 +1110,7 @@ function animSpin(ts) {
       spinning = false;
       sessionSpin++;
       wCanvas.classList.remove('spinning');
+      document.body.classList.remove('spinning'); // retoma partículas/orbs
       animateBulbs(false);
       flashWinningSegment();
       zoomToWinner(() => revealResult());

@@ -71,10 +71,18 @@
     background:radial-gradient(circle, rgba(245,196,60,.18), transparent 70%); }
 
   .particles { position:absolute; inset:0; pointer-events:none; }
+  /* Pausa as partículas durante o giro pra liberar GPU pro canvas */
+  body.spinning .particle {
+    animation-play-state:paused;
+  }
+  body.spinning .orb {
+    animation-play-state:paused;
+  }
   .particle {
     position:absolute; width:2px; height:2px; border-radius:50%;
     background:#ffe680; opacity:0;
     animation:float linear infinite;
+    will-change:transform, opacity;
   }
   @keyframes float {
     0%   { opacity:0; transform:translateY(0) scale(.5); }
@@ -202,6 +210,8 @@
   canvas#wheel {
     position:relative; z-index:2;
     border-radius:50%;
+    will-change:transform;
+    transform:translateZ(0); /* força compositing layer dedicada na GPU */
     filter:
       drop-shadow(0 0 24px rgba(44,184,99,.5))
       drop-shadow(0 0 60px rgba(0,80,30,.5));
@@ -372,15 +382,46 @@
     100% { box-shadow:0 -30px 120px rgba(255,230,128,.7), 0 -4px 0 var(--gold-4); }
   }
   .result-icon {
-    font-size:clamp(50px, 6vw, 80px);
-    animation:bounceIn .5s .2s both;
+    font-size:clamp(60px, 7vw, 90px);
+    display:inline-block;
+    animation:bounceInLose .6s .15s both, shakeLose 1.5s .8s ease-in-out infinite;
   }
   .result-bar.win .result-icon {
-    font-size:clamp(64px, 7vw, 100px);
-    animation:bounceInBig .5s .15s both;
+    font-size:clamp(72px, 8vw, 110px);
+    animation:bounceInWin .6s .15s both, danceWin 1.2s .9s ease-in-out infinite;
   }
-  @keyframes bounceIn    { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1)} }
-  @keyframes bounceInBig { 0%{transform:scale(0) rotate(-15deg);opacity:0} 60%{transform:scale(1.25) rotate(5deg);opacity:1} 100%{transform:scale(1) rotate(0)} }
+
+  /* Entrada — vitória: pula com rotação */
+  @keyframes bounceInWin {
+    0%   { transform:scale(0) rotate(-30deg); opacity:0; }
+    50%  { transform:scale(1.4) rotate(15deg); opacity:1; }
+    75%  { transform:scale(.9) rotate(-8deg); }
+    100% { transform:scale(1) rotate(0); }
+  }
+  /* Animação contínua vitória — dancinha de festa */
+  @keyframes danceWin {
+    0%, 100% { transform:scale(1) rotate(0deg) translateY(0); }
+    25%      { transform:scale(1.1) rotate(-12deg) translateY(-6px); }
+    50%      { transform:scale(1.05) rotate(0deg) translateY(0); }
+    75%      { transform:scale(1.1) rotate(12deg) translateY(-6px); }
+  }
+
+  /* Entrada — derrota: aparece tristinho, cabisbaixo */
+  @keyframes bounceInLose {
+    0%   { transform:scale(0) translateY(-20px); opacity:0; }
+    60%  { transform:scale(1.1) translateY(8px); opacity:1; }
+    100% { transform:scale(1) translateY(0); }
+  }
+  /* Animação contínua derrota — tremor de tristeza, vai de um lado pro outro */
+  @keyframes shakeLose {
+    0%, 100% { transform:rotate(0deg) translateY(0); }
+    10%      { transform:rotate(-8deg) translateY(2px); }
+    20%      { transform:rotate(8deg) translateY(2px); }
+    30%      { transform:rotate(-6deg) translateY(0); }
+    40%      { transform:rotate(6deg) translateY(0); }
+    50%      { transform:rotate(0deg) translateY(-3px); }
+    60%      { transform:rotate(0deg) translateY(0); }
+  }
 
   .result-text { text-align:center; }
   .result-label {
@@ -610,31 +651,34 @@ function positionBulbs() {
 }
 
 let bulbAnimating = false;
+let bulbInterval = null;
 function animateBulbs(active) {
   const bulbs = document.querySelectorAll('.bulb');
   if (active) {
+    if (bulbAnimating) return;
     bulbAnimating = true;
     let frame = 0;
-    function tick() {
-      if (!bulbAnimating) return;
+    // Single setInterval em vez de chain de setTimeouts (mais eficiente)
+    bulbInterval = setInterval(() => {
       bulbs.forEach((b, i) => {
         const lit = (i + frame) % 2 === 0;
         b.classList.toggle('off', !lit);
       });
       frame++;
-      setTimeout(tick, 180);
-    }
-    tick();
+    }, 180);
   } else {
     bulbAnimating = false;
+    if (bulbInterval) { clearInterval(bulbInterval); bulbInterval = null; }
     bulbs.forEach(b => b.classList.remove('off'));
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    SESSION CYCLE — controla quantos prêmios cada participante leva
+   Taxa de vitória: 50% (24 prêmios em 48 giros / 16 sessões)
+   Distribuição: cada participante ganha em média 1.5 prêmios
    ═══════════════════════════════════════════════════════════════ */
-const CYCLE_WINS = [1, 1, 0, 1, 2, 1, 0, 1, 1, 2, 1, 1, 0, 1, 2, 1];
+const CYCLE_WINS = [2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1];
 let cyclePhase = 0;
 let sessionSpin = 0;
 let sessionPlan = [];
@@ -976,12 +1020,12 @@ document.getElementById('spinBtn').onclick = function() {
   computeForcedSpin(sessionPlan[sessionSpin]);
   startTime = null; lastEased = 0; lastTickSeg = -1; pointerKick = 0;
   wCanvas.classList.add('spinning');
+  document.body.classList.add('spinning'); // pausa partículas/orbs durante giro
   animateBulbs(true);
   const wrap = document.getElementById('wheelWrap');
   wrap.style.transition = 'none';
   wrap.style.transform = 'scale(1)';
   void wrap.offsetWidth;
-  // Marca UI como "não escondida" (caso voltando de outro giro)
   uiHidden = false;
   requestAnimationFrame(animSpin);
 };
@@ -1066,6 +1110,7 @@ function animSpin(ts) {
       spinning = false;
       sessionSpin++;
       wCanvas.classList.remove('spinning');
+      document.body.classList.remove('spinning'); // retoma partículas/orbs
       animateBulbs(false);
       flashWinningSegment();
       zoomToWinner(() => revealResult());
@@ -1129,6 +1174,9 @@ function revealResult() {
   // Evita bugs onde o wobble visual empurra o ponteiro pra borda do segmento vizinho
   const p = PRIZES[targetSegmentIdx];
 
+  // DEBUG: confirma no console que estamos pegando o segmento certo
+  console.log('[REVEAL] targetSegmentIdx=' + targetSegmentIdx + ' label=' + p.label + ' win=' + p.win + ' shouldWin=' + sessionPlan[sessionSpin]);
+
   const icon  = document.getElementById('resIcon');
   const label = document.getElementById('resLabel');
   const name  = document.getElementById('resName');
@@ -1154,7 +1202,7 @@ function revealResult() {
     launchConfetti(p.glow);
     spawnWinStars();
   } else {
-    // Sorteia emoji de tristeza/diversão
+    // Sorteia emoji de tristeza/diversão (codepoints — imune a encoding)
     const loseEmojis = [
       0x1F605, // 😅 sorriso constrangido
       0x1F61C, // 😜 piscando
@@ -1164,8 +1212,8 @@ function revealResult() {
       0x1F614, // 😔 cabisbaixo
       0x1F643, // 🙃 cabeça pra baixo
     ];
-    const cpL = loseEmojis[Math.floor(Math.random() * loseEmojis.length)];
-    icon.textContent  = String.fromCodePoint(cpL);
+    const cp = loseEmojis[Math.floor(Math.random() * loseEmojis.length)];
+    icon.textContent  = String.fromCodePoint(cp);
     label.textContent = String.fromCodePoint(0x1F340) + '  Não foi desta vez...';
     name.textContent  = 'Tente Novamente!';
     name.style.color  = '#6fdc99';
@@ -1316,6 +1364,89 @@ buildParticles();
 buildBulbs();
 drawWheel(0);
 initSession();
+
+/* ═══════════════════════════════════════════════════════════════
+   WEBSOCKET — recebe comandos do celular (controle remoto)
+   ═══════════════════════════════════════════════════════════════ */
+(function setupWebSocket() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsUrl = `${proto}://${location.host}/ws?role=totem`;
+  let ws = null;
+  let reconnectTimer = null;
+
+  function connect() {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      console.log('[WS] Conectado como totem');
+      sendSessionState();
+    };
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'spin') {
+          const btn = document.getElementById('spinBtn');
+          if (btn && !btn.disabled) btn.click();
+        } else if (msg.type === 'next') {
+          if (typeof nextParticipant === 'function') nextParticipant();
+        }
+      } catch (e) {}
+    };
+    ws.onclose = () => {
+      console.log('[WS] Desconectado, tentando reconectar...');
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 2000);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  window.wsSend = function(msg) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+  };
+
+  function sendSessionState() {
+    window.wsSend({
+      type: 'session_state',
+      sessionSpin: typeof sessionSpin !== 'undefined' ? sessionSpin : 0,
+      canSpin: typeof spinning !== 'undefined' ? !spinning && sessionSpin < 3 : true
+    });
+  }
+
+  // Patch: spinBtn click manda "spinning"
+  const origSpinClick = document.getElementById('spinBtn').onclick;
+  document.getElementById('spinBtn').onclick = function() {
+    if (origSpinClick) origSpinClick.call(this);
+    if (spinning) window.wsSend({ type: 'spinning' });
+  };
+
+  // Hook revealResult — usa targetSegmentIdx (fonte da verdade)
+  const origReveal = window.revealResult;
+  window.revealResult = function() {
+    origReveal();
+    // FIX: usa o segmento sorteado, não o ângulo atual (evita inconsistência totem vs celular)
+    const p = PRIZES[targetSegmentIdx];
+    window.wsSend({
+      type: 'result',
+      win: p.win,
+      label: p.label,
+      sessionSpin: sessionSpin,
+      sessionEnded: sessionSpin >= 3
+    });
+  };
+
+  const origInit = window.initSession;
+  window.initSession = function() {
+    origInit();
+    setTimeout(sendSessionState, 100);
+  };
+
+  const origClose = window.closeResult;
+  window.closeResult = function() {
+    origClose();
+    setTimeout(sendSessionState, 100);
+  };
+
+  connect();
+})();
 </script>
 </body>
 </html>
