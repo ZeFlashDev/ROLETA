@@ -357,7 +357,11 @@
 <script>
   // ─── WebSocket ─────────────────────────────────────────────
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const wsUrl = `${proto}://${location.host}/ws?role=controle`;
+  // Lê ?sala= da URL — cada local tem sua própria sala
+  const urlParams = new URLSearchParams(location.search);
+  const sala = urlParams.get('sala') || 'default';
+  const wsUrl = `${proto}://${location.host}/ws?role=controle&sala=${encodeURIComponent(sala)}`;
+  console.log('[WS] Sala:', sala);
   let ws = null;
   let reconnectTimer = null;
 
@@ -412,12 +416,10 @@
       }
     }
     else if (msg.type === 'session_state') {
-      // { sessionSpin, canSpin, prizesWon }
       canSpin = msg.canSpin;
       spinBtn.disabled = !canSpin || !totemOnline;
       updateCounter(msg.sessionSpin || 0);
       if (msg.canSpin) {
-        // Esconde botão "Próximo" quando entra nova sessão
         nextBtn.style.display = 'none';
         infoLabel.textContent = `Giro ${(msg.sessionSpin || 0) + 1} de 3`;
         infoText.textContent = 'Pressione girar';
@@ -432,21 +434,17 @@
       infoText.className = 'info-text spinning';
     }
     else if (msg.type === 'result') {
-      // { win, label, sessionSpin, sessionEnded }
       infoLabel.textContent = msg.win ? 'Você ganhou!' : 'Não foi dessa vez';
       infoText.textContent = msg.win ? msg.label : 'Tente Novamente!';
       infoText.className = 'info-text ' + (msg.win ? 'win' : 'lose');
       updateCounter((msg.sessionSpin || 0));
-      // Se sessão acabou, mostra botão "Próximo Participante"
       if (msg.sessionEnded) {
         spinBtn.disabled = true;
-        // Mostra botão pra qualquer celular passar pro próximo
         setTimeout(() => {
           nextBtn.style.display = 'inline-block';
-        }, 2500); // espera 2.5s pra deixar ver o resumo
+        }, 2500);
       } else {
         nextBtn.style.display = 'none';
-        // Reabilita após uns segundos pro próximo giro
         setTimeout(() => {
           if (totemOnline) { canSpin = true; spinBtn.disabled = false; }
         }, 4000);
