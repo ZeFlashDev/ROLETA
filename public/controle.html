@@ -309,9 +309,113 @@
     box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* ─── Tela de senha ──────────────────────────────────────── */
+  .lock-screen {
+    position:fixed; inset:0; z-index:1000;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:24px; padding:30px;
+    background:radial-gradient(ellipse at 50% 30%, #0d3a22 0%, #061a0e 60%, #02080a 100%);
+  }
+  .lock-screen.hidden { display:none; }
+  .lock-icon {
+    font-size:64px;
+    filter:drop-shadow(0 4px 16px rgba(245,196,60,.5));
+    animation:lockBounce .8s ease-out both;
+  }
+  @keyframes lockBounce {
+    0%   { transform:scale(0); opacity:0; }
+    60%  { transform:scale(1.2); opacity:1; }
+    100% { transform:scale(1); }
+  }
+  .lock-title {
+    font-family:'Cinzel', serif; font-weight:900;
+    font-size:24px; letter-spacing:4px;
+    text-transform:uppercase;
+    color:#fff;
+    text-align:center;
+    text-shadow:0 0 24px rgba(44,184,99,.5);
+  }
+  .lock-subtitle {
+    font-size:12px; letter-spacing:5px;
+    color:rgba(255,255,255,.5);
+    text-transform:uppercase;
+    text-align:center;
+  }
+  .lock-input {
+    width:280px; max-width:80vw;
+    padding:18px 24px;
+    background:rgba(255,255,255,.08);
+    border:2px solid rgba(245,196,60,.4);
+    border-radius:16px;
+    color:#fff;
+    font-family:'Cinzel', serif; font-weight:700;
+    font-size:32px; letter-spacing:12px;
+    text-align:center;
+    outline:none;
+    transition:all .2s;
+    backdrop-filter:blur(8px);
+  }
+  .lock-input:focus {
+    border-color:var(--gold-2);
+    box-shadow:0 0 0 4px rgba(245,196,60,.2);
+    background:rgba(255,255,255,.12);
+  }
+  .lock-input.error {
+    border-color:#ff5252;
+    animation:shake .4s ease-in-out;
+  }
+  @keyframes shake {
+    0%,100% { transform:translateX(0); }
+    20%,60% { transform:translateX(-8px); }
+    40%,80% { transform:translateX(8px); }
+  }
+  .lock-button {
+    padding:14px 50px;
+    background:linear-gradient(180deg, var(--green-4) 0%, var(--green-3) 50%, var(--green-2) 100%);
+    border:2px solid var(--gold-2);
+    border-radius:50px;
+    color:#fff;
+    font-family:'Cinzel', serif; font-weight:700;
+    font-size:16px; letter-spacing:4px;
+    text-transform:uppercase;
+    cursor:pointer; outline:none;
+    box-shadow:
+      0 6px 22px rgba(44,184,99,.5),
+      inset 0 1px 0 rgba(255,255,255,.25);
+    transition:transform .15s;
+  }
+  .lock-button:active { transform:scale(.95); }
+  .lock-error {
+    font-size:13px; letter-spacing:2px;
+    color:#ff7676;
+    text-transform:uppercase;
+    height:14px;
+    transition:opacity .2s;
+    opacity:0;
+  }
+  .lock-error.show { opacity:1; }
 </style>
 </head>
 <body>
+
+<!-- Tela de senha -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <div class="lock-title">Acesso Restrito</div>
+  <div class="lock-subtitle">Digite a senha do evento</div>
+  <input type="tel"
+         inputmode="numeric"
+         maxlength="4"
+         pattern="[0-9]*"
+         class="lock-input"
+         id="lockInput"
+         placeholder="••••"
+         autocomplete="off">
+  <div class="lock-error" id="lockError">Senha incorreta</div>
+  <button class="lock-button" id="lockBtn">Entrar</button>
+</div>
 
 <div class="header">
   <div class="title">Abra Caminho para a <em>Revolução</em></div>
@@ -355,6 +459,56 @@
 <div class="toast" id="toast">✓ Comando enviado</div>
 
 <script>
+  // ─── Tela de senha ─────────────────────────────────────────
+  const PASSWORD = '0286';
+  const lockScreen = document.getElementById('lockScreen');
+  const lockInput = document.getElementById('lockInput');
+  const lockBtn = document.getElementById('lockBtn');
+  const lockError = document.getElementById('lockError');
+
+  function unlock() {
+    lockScreen.classList.add('hidden');
+    sessionStorage.setItem('cortevaUnlocked', '1');
+    // Foca no resto da tela
+    document.body.focus();
+  }
+
+  function checkPassword() {
+    const val = lockInput.value.trim();
+    if (val === PASSWORD) {
+      unlock();
+    } else {
+      lockInput.classList.add('error');
+      lockError.classList.add('show');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+      setTimeout(() => {
+        lockInput.classList.remove('error');
+        lockInput.value = '';
+        lockInput.focus();
+      }, 500);
+      setTimeout(() => lockError.classList.remove('show'), 2500);
+    }
+  }
+
+  lockBtn.addEventListener('click', checkPassword);
+  lockInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkPassword();
+  });
+  // Auto-submit quando digitar 4 dígitos
+  lockInput.addEventListener('input', () => {
+    if (lockInput.value.length === 4) {
+      setTimeout(checkPassword, 100);
+    }
+  });
+
+  // Se já desbloqueou nessa sessão, pula a tela
+  if (sessionStorage.getItem('cortevaUnlocked') === '1') {
+    lockScreen.classList.add('hidden');
+  } else {
+    // Foca o input automaticamente
+    setTimeout(() => lockInput.focus(), 300);
+  }
+
   // ─── WebSocket ─────────────────────────────────────────────
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   // Lê ?sala= da URL — cada local tem sua própria sala
